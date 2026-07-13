@@ -11,11 +11,12 @@ ranking system.
 
 ## At a glance
 
-| Evidence                  | Calculation                   | Fairness                          | Delivery              |
-| ------------------------- | ----------------------------- | --------------------------------- | --------------------- |
-| Jira, GitLab, Confluence  | Versioned deterministic rules | Visible formulas and source links | Angular + Spring Boot |
-| Global identity discovery | Explicit coverage states      | Developer dispute workflow        | PostgreSQL + Docker   |
-| Read-only connectors      | AI is advisory only           | Human final decision              | PDF and Excel exports |
+| Evidence                   | Calculation                   | Fairness                          | Delivery              |
+| -------------------------- | ----------------------------- | --------------------------------- | --------------------- |
+| Jira, GitLab, Confluence   | Versioned deterministic rules | Visible formulas and source links | Angular + Spring Boot |
+| Global identity discovery  | Explicit coverage states      | Developer dispute workflow        | PostgreSQL + Docker   |
+| Read-only connectors       | AI is advisory only           | Human final decision              | PDF and Excel exports |
+| Generic engineering tracks | Common + track criteria       | No hidden productivity score      | Full E2E verification |
 
 ## How it works
 
@@ -51,9 +52,15 @@ results, AI explains supplied facts, and authorized people make the career decis
 6. A lead or manager records a reasoned decision and finalizes the report.
 7. Export the reviewed result as PDF or Excel.
 
-Any custom period is supported. Boundaries use the selected IANA timezone. Thresholds are not
-prorated: a short period is an evidence snapshot evaluated against the published rule unless the
-organization explicitly versions a scaling policy.
+Any custom period is supported and boundaries use the selected IANA timezone. Every criterion owns
+an explicit proration policy: `ALLOWED`, `PROGRESS_ONLY`, or `FORBIDDEN`. Partial periods show the
+observed value, proportional expected pace, and full cadence target. `ASSESSMENT` produces formal
+PASS/FAIL only when the published policy permits it; progress-only rules preserve the valid evidence
+without manufacturing a promotion decision from an incomplete period.
+
+The report displays one active evaluation at a time. Its Data Readiness panel separates connector
+health, identity verification, and period evidence (`SYNCED`, `NO_ACTIVITY`, or unavailable), so a
+missing identity is never presented as a connector failure.
 
 ## Identity discovery
 
@@ -63,14 +70,18 @@ Corporate email is the human identifier; stable source IDs are stored after disc
 - Confluence reuses the verified Atlassian identity.
 - GitLab searches by email and then by its local part because profile emails may be private.
 
-Only one exact candidate per source is auto-confirmed. Ambiguous results require review. Search
-scope is global only within the projects, repositories, and spaces visible to the configured
-read-only accounts.
+An exact email match is preferred. Until an Atlassian organization directory token is available,
+Jira may hide email addresses; in that case a single strong corporate-email/display-name match
+(`angel.angelov` → `Angel A.`) is accepted with an auditable match type and confidence. Multiple
+or weaker candidates remain unverified and must be confirmed from the report or Integrations
+screen. Search scope is global only within the projects, repositories, and spaces visible to the
+configured read-only accounts.
 
 ## Deterministic metrics
 
-Each published criterion contains a source, normalized metric key, aggregation, operator,
-threshold, evaluation type, level, and version.
+Each published criterion contains a source, normalized metric key, aggregation, operator or range,
+threshold, cadence, proration policy, scope, track/team applicability, mandatory/supporting flag,
+evaluation type, human rubric, level, version, and effective date.
 
 ```text
 Velocity       = SUM(jira.story_points)
@@ -122,19 +133,27 @@ not documentation quality or organizational impact.
 
 Every result exposes formula, measured value, threshold, coverage, and source records.
 
-## Seeded career matrix
+## Framework v2 and engineering tracks
 
-| Level     | Current measurable or review-supported criteria                                          |
-| --------- | ---------------------------------------------------------------------------------------- |
-| Junior    | Velocity ≥ 150; QA ratio < 25%; ≥ 1 documentation contribution                           |
-| Mid       | Velocity ≥ 250; QA ratio < 15%; ≥ 20 reviews/month; ≥ 2 documentation contributions      |
-| Mid II    | Velocity ≥ 250; QA ratio < 12%; ≥ 30 reviews/month; cross-project review                 |
-| Senior    | Velocity ≥ 150; QA ratio < 10%; ≥ 40 final audits; ≥ 5 analysis approvals                |
-| Principal | Core velocity ≥ 100; QA ratio < 5%; ≥ 40 audits; ≥ 10 analysis approvals; ≥ 1 initiative |
+Framework v2 implements the final seven-level progression: **Junior I → Junior II → Mid I → Mid II
+→ Senior I → Senior II → Principal**. The earlier five-level framework remains immutable as version
+1 so historical reports stay reproducible.
 
-Core scope, ownership, mentoring, final audits, analysis approval, and strategic initiatives still
-need organization-specific definitions. Until then, the honest state is `NO_DATA` or
-`NEEDS_REVIEW`, not an invented score.
+| Configuration layer | Purpose                                                                                                                |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Common criteria     | Company expectations shared by every engineer                                                                          |
+| Engineering track   | Backend, Frontend, General, or a future configurable discipline                                                        |
+| Team criteria       | A deliberately published team-specific addition                                                                        |
+| Competency baseline | Technical skills, independence, reviews, ownership, mentoring, architecture, business understanding, cross-team impact |
+
+Backend and Frontend are preloaded tracks; Full-stack is a draft example. Administrators can add
+Data, QA Automation, Platform, Mobile, or another track without changing application code. New
+external systems still require an `EngineeringConnector`, but new levels, tracks, rubrics, ranges,
+cadences, and criteria are configuration.
+
+The quantitative targets from the approved framework are seeded as version 2. Ownership,
+mentoring, standards, architecture, review quality, and strategic impact use visible human rubrics
+and remain `NEEDS_REVIEW`; the system never converts them into invented repository scores.
 
 ## AI and human review
 
@@ -175,6 +194,10 @@ Configure least-privilege credentials:
 
 Secrets are read only by the backend. `.env` is ignored by Git; production must inject secrets from
 a secret manager and use `DEV_AUTH_ENABLED=false`, OIDC, TLS, backups, and a data-retention policy.
+
+Local Docker Compose runs load connector credentials directly from the project `.env`. This avoids
+unrelated shell variables such as `JIRA_TOKEN` overriding the credentials selected for this app.
+Production platforms should inject the same variables directly into the backend container.
 
 ## Run
 
@@ -225,14 +248,15 @@ E2E suite. Failed E2E diagnostics are uploaded as a short-lived artifact.
 New source integrations implement `EngineeringConnector` and return normalized evidence. Career
 rules remain outside connectors.
 
-When adding a metric:
+When adding a track or metric:
 
-1. Agree on definitions, exclusions, and ambiguous examples.
-2. Define a stable metric key and evidence schema.
-3. Implement paginated, deduplicated, rate-limit-aware extraction.
-4. Implement deterministic formulas independently of AI.
-5. Test included, excluded, missing, and ambiguous cases.
-6. Show the exact calculation and evidence to developers.
-7. Pilot and calibrate before publishing a new rule version.
+1. Create or reuse a generic engineering track.
+2. Agree on definitions, exclusions, attribution, cadence, and ambiguous examples.
+3. Define a stable metric key, evidence schema, coverage rule, and human rubric where required.
+4. Implement paginated, deduplicated, rate-limit-aware extraction only when the source is new.
+5. Configure deterministic formulas independently of AI.
+6. Test included, excluded, missing, ambiguous, track, RBAC, and historical-version cases.
+7. Preview the rule, show its exact calculation to developers, and publish it with an effective date.
+8. Pilot and calibrate before using it in promotion decisions.
 
 Prefer a smaller set of trusted metrics over a large set of weak proxies.

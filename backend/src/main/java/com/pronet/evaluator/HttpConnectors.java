@@ -8,6 +8,7 @@ import java.util.*;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 abstract class ReadOnlyHttpConnector implements EngineeringConnector {
     final String baseUrl, token;
@@ -25,12 +26,30 @@ abstract class ReadOnlyHttpConnector implements EngineeringConnector {
 
     public ConnectorHealth testConnection() {
         if (baseUrl.isBlank() || token.isBlank())
-            return new ConnectorHealth(false, "Missing URL or token");
+            return new ConnectorHealth(false, "Missing URL or token", "NOT_CONFIGURED");
         try {
             healthRequest();
-            return new ConnectorHealth(true, "Connected read-only");
+            return new ConnectorHealth(true, "Connected read-only", "CONNECTED");
+        } catch (RestClientResponseException e) {
+            int status = e.getStatusCode().value();
+            if (status == 401)
+                return new ConnectorHealth(
+                        false,
+                        "The configured credentials were rejected (HTTP 401)",
+                        "AUTHENTICATION_FAILED");
+            if (status == 403)
+                return new ConnectorHealth(
+                        false,
+                        "The account is authenticated but cannot access this service (HTTP 403)",
+                        "ACCESS_DENIED");
+            if (status == 429)
+                return new ConnectorHealth(
+                        false, "The service rate limit was reached (HTTP 429)", "RATE_LIMITED");
+            return new ConnectorHealth(
+                    false, "The service returned HTTP " + status, "SOURCE_UNAVAILABLE");
         } catch (Exception e) {
-            return new ConnectorHealth(false, e.getMessage());
+            return new ConnectorHealth(
+                    false, "The service could not be reached", "SOURCE_UNAVAILABLE");
         }
     }
 
@@ -948,13 +967,15 @@ class ConfluenceConnector extends ReadOnlyHttpConnector {
     }
 
     public List<EvidenceInput> syncEvidence(String id, Instant from, Instant to) {
+        var searchFrom = from.atZone(java.time.ZoneOffset.UTC).toLocalDate().minusDays(1);
+        var searchTo = to.atZone(java.time.ZoneOffset.UTC).toLocalDate().plusDays(1);
         String cql =
                 "type=page AND contributor=\""
                         + id.replace("\"", "")
                         + "\" AND lastModified >= \""
-                        + from.atZone(java.time.ZoneOffset.UTC).toLocalDate()
+                        + searchFrom
                         + "\" AND lastModified < \""
-                        + to.atZone(java.time.ZoneOffset.UTC).toLocalDate()
+                        + searchTo
                         + "\"";
         Map<?, ?> body =
                 client.get()
@@ -973,11 +994,13 @@ class ConfluenceConnector extends ReadOnlyHttpConnector {
                 Map<?, ?> m = (Map<?, ?>) x;
                 Map<?, ?> links = m.get("_links") instanceof Map<?, ?> l ? l : Map.of();
                 Map<?, ?> version = m.get("version") instanceof Map<?, ?> v ? v : Map.of();
+                Instant occurredAt = instant(version.get("when"));
+                if (occurredAt.isBefore(from) || !occurredAt.isBefore(to)) continue;
                 out.add(
                         new EvidenceInput(
                                 "documentation_updates",
                                 Objects.toString(m.get("id")),
-                                instant(version.get("when")),
+                                occurredAt,
                                 BigDecimal.ONE,
                                 Objects.toString(m.get("title"), "Confluence page"),
                                 baseUrl + Objects.toString(links.get("webui"), ""),

@@ -78,6 +78,82 @@ class IdentityDiscoveryServiceTest {
         verify(employees, never()).save(any());
     }
 
+    @Test
+    void provisionsFromOneUniqueJiraFirstNameAndSurnameInitialMatch() {
+        var employees = mock(EmployeeRepository.class);
+        var identities = mock(ExternalIdentityRepository.class);
+        when(employees.findByCanonicalEmailIgnoreCase("angel.angelov@pronetgaming.com"))
+                .thenReturn(Optional.empty());
+        when(employees.save(any(Employee.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(identities.findByEmployeeIdAndToolKey(any(), anyString()))
+                .thenReturn(Optional.empty());
+        when(identities.save(any(ExternalIdentity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var service =
+                new IdentityDiscoveryService(
+                        List.of(
+                                connector(
+                                        "jira",
+                                        new IdentityCandidate(
+                                                "642a6ce696822e1821fe3149",
+                                                "Angel A.",
+                                                "",
+                                                false))),
+                        employees,
+                        identities);
+
+        var employee = service.findOrProvision("angel.angelov@pronetgaming.com");
+
+        assertEquals("Angel A", employee.getDisplayName());
+        verify(identities)
+                .save(
+                        argThat(
+                                identity ->
+                                        identity.isVerified()
+                                                && identity.getExternalUserId()
+                                                        .equals("642a6ce696822e1821fe3149")
+                                                && identity.getMatchedEmail()
+                                                        .equals("angel.angelov@pronetgaming.com")));
+    }
+
+    @Test
+    void doesNotInferIdentityWhenMoreThanOneJiraCandidateMatches() {
+        var employees = mock(EmployeeRepository.class);
+        when(employees.findByCanonicalEmailIgnoreCase("angel.angelov@pronetgaming.com"))
+                .thenReturn(Optional.empty());
+        var connector = mock(EngineeringConnector.class);
+        when(connector.key()).thenReturn("jira");
+        when(connector.testConnection()).thenReturn(new ConnectorHealth(true, "healthy"));
+        when(connector.discoverUsers(anyString()))
+                .thenReturn(
+                        List.of(
+                                new IdentityCandidate("1", "Angel A.", "", false),
+                                new IdentityCandidate("2", "Angel Angelov", "", false)));
+        var service =
+                new IdentityDiscoveryService(
+                        List.of(connector), employees, mock(ExternalIdentityRepository.class));
+
+        assertThrows(
+                NoSuchElementException.class,
+                () -> service.findOrProvision("angel.angelov@pronetgaming.com"));
+        verify(employees, never()).save(any());
+    }
+
+    @Test
+    void requiresMatchingSurnameOrInitial() {
+        assertTrue(
+                IdentityDiscoveryService.strongNameMatch(
+                        "angel.angelov@pronetgaming.com", "Angel A."));
+        assertTrue(
+                IdentityDiscoveryService.strongNameMatch(
+                        "angel.angelov@pronetgaming.com", "Angel Angelov"));
+        assertFalse(
+                IdentityDiscoveryService.strongNameMatch(
+                        "angel.angelov@pronetgaming.com", "Angel Petrov"));
+    }
+
     private EngineeringConnector connector(String key, IdentityCandidate candidate) {
         return new EngineeringConnector() {
             @Override

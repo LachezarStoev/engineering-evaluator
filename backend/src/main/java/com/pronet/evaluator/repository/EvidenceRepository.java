@@ -15,6 +15,9 @@ public interface EvidenceRepository extends JpaRepository<Evidence, UUID> {
     List<Evidence> findByEmployeeIdAndOccurredAtBetweenOrderByOccurredAtDesc(
             UUID employeeId, Instant from, Instant to);
 
+    List<Evidence> findByEmployeeIdAndToolKeyAndOccurredAtBetween(
+            UUID employeeId, String toolKey, Instant from, Instant to);
+
     List<Evidence> findByEmployeeIdOrderByOccurredAtDesc(UUID employeeId);
 
     Optional<Evidence> findByToolKeyAndExternalIdAndMetricKey(

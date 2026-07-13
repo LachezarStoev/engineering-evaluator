@@ -13,10 +13,36 @@ interface EngineeringConnector {
     List<EvidenceInput> syncEvidence(String externalUserId, Instant from, Instant to);
 }
 
-record ConnectorHealth(boolean healthy, String message) {}
+record ConnectorHealth(boolean healthy, String message, String status) {
+    ConnectorHealth(boolean healthy, String message) {
+        this(healthy, message, healthy ? "CONNECTED" : "SOURCE_UNAVAILABLE");
+    }
+}
 
 record IdentityCandidate(
-        String externalUserId, String username, String email, boolean exactMatch) {}
+        String externalUserId,
+        String username,
+        String email,
+        boolean exactMatch,
+        IdentityMatchType matchType,
+        int confidence) {
+    IdentityCandidate(String externalUserId, String username, String email, boolean exactMatch) {
+        this(
+                externalUserId,
+                username,
+                email,
+                exactMatch,
+                exactMatch ? IdentityMatchType.EXACT_EMAIL : IdentityMatchType.UNVERIFIED,
+                exactMatch ? 100 : 0);
+    }
+}
+
+enum IdentityMatchType {
+    EXACT_EMAIL,
+    UNIQUE_NAME,
+    REUSED_ATLASSIAN,
+    UNVERIFIED
+}
 
 record EvidenceInput(
         String metricKey,

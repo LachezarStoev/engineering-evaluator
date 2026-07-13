@@ -4,8 +4,11 @@ import type {
   AiSummary,
   ConnectorConfig,
   Criterion,
+  DataReadiness,
   Employee,
   EngineeringLevel,
+  EngineeringTrack,
+  FrameworkDefinition,
   Evaluation,
   Evidence,
   IdentityCandidate,
@@ -28,6 +31,12 @@ export class EvaluatorApi {
   levels() {
     return this.http.get<EngineeringLevel[]>('/api/v1/levels');
   }
+  tracks() {
+    return this.http.get<EngineeringTrack[]>('/api/v1/tracks');
+  }
+  framework(version = 2) {
+    return this.http.get<FrameworkDefinition>(`/api/v1/frameworks/${version}`);
+  }
   criteria() {
     return this.http.get<Criterion[]>('/api/v1/criteria');
   }
@@ -39,6 +48,9 @@ export class EvaluatorApi {
   evidence(evaluationId: string) {
     return this.http.get<Evidence[]>(`/api/v1/evaluations/${evaluationId}/evidence`);
   }
+  readiness(evaluationId: string) {
+    return this.http.get<DataReadiness[]>(`/api/v1/evaluations/${evaluationId}/readiness`);
+  }
   aiSummary(evaluationId: string) {
     return this.http.get<AiSummary>(`/api/v1/evaluations/${evaluationId}/ai-summary`);
   }
@@ -47,6 +59,14 @@ export class EvaluatorApi {
   }
   createLevel(request: object) {
     return this.http.post('/api/v1/levels', request);
+  }
+  createTrack(request: object) {
+    return this.http.post<EngineeringTrack>('/api/v1/tracks', request);
+  }
+  assignTrack(email: string, trackCode: string) {
+    return this.http.patch<Employee>(`/api/v1/employees/${encodeURIComponent(email)}/track`, {
+      trackCode,
+    });
   }
   createCriterion(request: object) {
     return this.http.post('/api/v1/criteria', request);

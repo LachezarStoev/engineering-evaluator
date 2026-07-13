@@ -22,11 +22,23 @@ public class CriterionResult {
     @Column(name = "criterion_id")
     private UUID criterionId;
 
+    @Column(name = "criterion_name")
+    private String criterionName;
+
     @Column(name = "measured_value")
     private BigDecimal measuredValue;
 
     @Column(name = "threshold_value")
     private BigDecimal thresholdValue;
+
+    @Column(name = "threshold_max_value")
+    private BigDecimal thresholdMaxValue;
+
+    @Column(name = "period_target_value")
+    private BigDecimal periodTargetValue;
+
+    @Column(name = "period_target_max_value")
+    private BigDecimal periodTargetMaxValue;
 
     @Column(name = "result_status")
     @Enumerated(EnumType.STRING)
@@ -34,6 +46,7 @@ public class CriterionResult {
 
     private String formula;
     private String coverage;
+    private String cadence;
 
     @Column(name = "manager_decision")
     @Enumerated(EnumType.STRING)

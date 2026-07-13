@@ -34,6 +34,18 @@ class AccessService {
         return employee.isPresent() && canViewEmployee(employee.get().getCanonicalEmail(), auth);
     }
 
+    public boolean canManageIdentity(String email, Authentication auth) {
+        if (auth == null) return false;
+        if (has(auth, "ORGANIZATION_ADMIN")
+                || has(auth, "INTEGRATION_ADMIN")
+                || has(auth, "ENGINEERING_MANAGER")) return true;
+        if (!has(auth, "TEAM_LEAD")) return false;
+        var employee = employees.findByCanonicalEmailIgnoreCase(email);
+        return employee.isPresent()
+                && EvaluationService.normalize(auth.getName())
+                        .equals(EvaluationService.normalize(employee.get().getManagerEmail()));
+    }
+
     private boolean has(Authentication a, String role) {
         return a.getAuthorities().stream().anyMatch(x -> x.getAuthority().equals("ROLE_" + role));
     }

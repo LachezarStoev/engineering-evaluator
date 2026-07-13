@@ -129,6 +129,30 @@ class EvaluationApiIntegrationTest {
         mvc.perform(get("/api/v1/evaluations/" + evaluationId + "/export.pdf"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/pdf"));
+
+        mvc.perform(
+                        post("/api/v1/evaluations/recalculate")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+      {"email":"dev@example.com","period":"2026-07-08..2026-07-10-snapshot","from":"2026-07-08","to":"2026-07-10","timezone":"Europe/Sofia","mode":"SNAPSHOT","levelCode":"MID","ruleVersion":1}
+      """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.evaluationMode").value("SNAPSHOT"))
+                .andExpect(
+                        jsonPath("$.results[?(@.formula =~ /.*story_points.*/)].resultStatus")
+                                .value(
+                                        org.hamcrest.Matchers.everyItem(
+                                                org.hamcrest.Matchers.is("NOT_COMPARABLE"))));
+
+        mvc.perform(
+                        post("/api/v1/evaluations/recalculate")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+      {"email":"dev@example.com","period":"2026-07-08..2026-07-10-snapshot","from":"2026-07-08","to":"2026-07-10","timezone":"Europe/Sofia","mode":"SNAPSHOT","levelCode":"MID","ruleVersion":1}
+      """))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -141,5 +165,126 @@ class EvaluationApiIntegrationTest {
                                 .content(
                                         "{\"code\":\"X\",\"name\":\"X\",\"ordinal\":1,\"version\":1,\"status\":\"DRAFT\",\"effectiveFrom\":\"2026-01-01\"}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void exposesSevenLevelFrameworkAndAppliesTrackCriteriaWithoutHardcodedTrackTypes()
+            throws Exception {
+        mvc.perform(get("/api/v1/frameworks/2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.version").value(2))
+                .andExpect(jsonPath("$.levels.length()").value(7))
+                .andExpect(jsonPath("$.levels[0].code").value("JUNIOR_I"))
+                .andExpect(jsonPath("$.levels[6].code").value("PRINCIPAL"))
+                .andExpect(jsonPath("$.tracks[?(@.code == 'BACKEND')]").exists())
+                .andExpect(jsonPath("$.tracks[?(@.code == 'FRONTEND')]").exists())
+                .andExpect(jsonPath("$.competencies.length()").value(56));
+
+        String suffix = Long.toString(System.nanoTime());
+        String trackCode = "DATA_" + suffix;
+        String email = "data-" + suffix + "@example.com";
+        String metric = "data_quality_" + suffix;
+
+        mvc.perform(
+                        post("/api/v1/tracks")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        json.writeValueAsBytes(
+                                                Map.of(
+                                                        "code", trackCode,
+                                                        "name", "Data Engineering",
+                                                        "description", "Custom track",
+                                                        "ordinal", 10,
+                                                        "version", 1,
+                                                        "status", "PUBLISHED",
+                                                        "effectiveFrom", "2026-07-13"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.code").value(trackCode));
+
+        mvc.perform(
+                        post("/api/v1/employees")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        json.writeValueAsBytes(
+                                                Map.of(
+                                                        "email", email,
+                                                        "displayName", "Data Developer",
+                                                        "team", "Data",
+                                                        "trackCode", trackCode,
+                                                        "currentLevelCode", "MID_I",
+                                                        "targetLevelCode", "MID_I",
+                                                        "employmentStart", "2026-01-01"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.trackCode").value(trackCode));
+
+        mvc.perform(
+                        post("/api/v1/criteria")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        json.writeValueAsBytes(
+                                                Map.ofEntries(
+                                                        Map.entry("code", "DATA_QUALITY_" + suffix),
+                                                        Map.entry("name", "Data quality"),
+                                                        Map.entry("sourceTool", "jira"),
+                                                        Map.entry("metricKey", metric),
+                                                        Map.entry("evaluationType", "AUTOMATIC"),
+                                                        Map.entry("periodType", "QUARTER"),
+                                                        Map.entry("operator", ">="),
+                                                        Map.entry("threshold", 1),
+                                                        Map.entry("aggregation", "COUNT"),
+                                                        Map.entry("levelCode", "MID_I"),
+                                                        Map.entry("scope", "TRACK"),
+                                                        Map.entry("trackCode", trackCode),
+                                                        Map.entry("prorationPolicy", "ALLOWED"),
+                                                        Map.entry("mandatory", true),
+                                                        Map.entry("version", 2),
+                                                        Map.entry("status", "PUBLISHED"),
+                                                        Map.entry("effectiveFrom", "2026-07-13")))))
+                .andExpect(status().isCreated());
+
+        mvc.perform(
+                        post("/api/v1/evidence")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        json.writeValueAsBytes(
+                                                Map.of(
+                                                        "email",
+                                                        email,
+                                                        "toolKey",
+                                                        "jira",
+                                                        "metricKey",
+                                                        metric,
+                                                        "externalId",
+                                                        "DATA-" + suffix,
+                                                        "occurredAt",
+                                                        "2026-07-10T10:00:00Z",
+                                                        "value",
+                                                        1,
+                                                        "title",
+                                                        "Data quality improvement"))))
+                .andExpect(status().isCreated());
+
+        mvc.perform(
+                        post("/api/v1/evaluations/recalculate")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        json.writeValueAsBytes(
+                                                Map.of(
+                                                        "email", email,
+                                                        "period", "2026-Q3-data",
+                                                        "from", "2026-07-01",
+                                                        "to", "2026-09-30",
+                                                        "timezone", "Europe/Sofia",
+                                                        "mode", "ASSESSMENT",
+                                                        "levelCode", "MID_I",
+                                                        "ruleVersion", 2))))
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath("$.results[?(@.criterionName == 'Data quality')].resultStatus")
+                                .value(org.hamcrest.Matchers.contains("PASS")))
+                .andExpect(
+                        jsonPath(
+                                        "$.results[?(@.criterionName == 'Internal demo or presentation')].resultStatus")
+                                .value(org.hamcrest.Matchers.contains("NEEDS_REVIEW")));
     }
 }

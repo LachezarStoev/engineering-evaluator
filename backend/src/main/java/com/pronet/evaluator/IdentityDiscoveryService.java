@@ -2,6 +2,7 @@ package com.pronet.evaluator;
 
 import com.pronet.evaluator.domain.*;
 import com.pronet.evaluator.repository.*;
+import java.text.Normalizer;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,11 +15,35 @@ class IdentityDiscoveryService {
     private final EmployeeRepository employees;
     private final ExternalIdentityRepository identities;
 
-    record Discovery(String tool, ConnectorHealth health, List<IdentityCandidate> candidates) {}
+    record Discovery(
+            String tool,
+            ConnectorHealth health,
+            List<IdentityCandidate> candidates,
+            boolean verified) {
+        Discovery(String tool, ConnectorHealth health, List<IdentityCandidate> candidates) {
+            this(tool, health, candidates, false);
+        }
+    }
 
     List<Discovery> discover(String email) {
-        employees.findByCanonicalEmailIgnoreCase(EvaluationService.normalize(email)).orElseThrow();
-        return discoverFromConnectors(email);
+        var employee =
+                employees
+                        .findByCanonicalEmailIgnoreCase(EvaluationService.normalize(email))
+                        .orElseThrow();
+        var verifiedTools =
+                identities.findByEmployeeId(employee.getId()).stream()
+                        .filter(ExternalIdentity::isVerified)
+                        .map(ExternalIdentity::getToolKey)
+                        .collect(java.util.stream.Collectors.toSet());
+        return discoverFromConnectors(email).stream()
+                .map(
+                        item ->
+                                new Discovery(
+                                        item.tool(),
+                                        item.health(),
+                                        item.candidates(),
+                                        verifiedTools.contains(item.tool())))
+                .toList();
     }
 
     @Transactional
@@ -73,6 +98,7 @@ class IdentityDiscoveryService {
                                             }
                                         })
                                 .toList());
+        inferUniqueJiraNameMatch(discovered, email);
         var jiraIdentity =
                 discovered.stream()
                         .filter(d -> d.tool().equals("jira"))
@@ -96,11 +122,74 @@ class IdentityDiscoveryService {
                                                     jira.externalUserId(),
                                                     jira.username(),
                                                     email,
-                                                    true))));
+                                                    true,
+                                                    IdentityMatchType.REUSED_ATLASSIAN,
+                                                    jira.confidence()))));
                 }
             }
         }
         return discovered;
+    }
+
+    private void inferUniqueJiraNameMatch(List<Discovery> discovered, String email) {
+        for (int index = 0; index < discovered.size(); index++) {
+            var discovery = discovered.get(index);
+            if (!discovery.tool().equals("jira")
+                    || discovery.candidates().stream().anyMatch(IdentityCandidate::exactMatch)) {
+                continue;
+            }
+
+            var matches =
+                    discovery.candidates().stream()
+                            .filter(candidate -> strongNameMatch(email, candidate.username()))
+                            .toList();
+            if (matches.size() != 1) continue;
+
+            var selected = matches.getFirst();
+            var candidates =
+                    discovery.candidates().stream()
+                            .map(
+                                    candidate ->
+                                            candidate == selected
+                                                    ? new IdentityCandidate(
+                                                            candidate.externalUserId(),
+                                                            candidate.username(),
+                                                            email,
+                                                            true,
+                                                            IdentityMatchType.UNIQUE_NAME,
+                                                            85)
+                                                    : candidate)
+                            .toList();
+            discovered.set(index, new Discovery(discovery.tool(), discovery.health(), candidates));
+        }
+    }
+
+    static boolean strongNameMatch(String email, String displayName) {
+        if (email == null || displayName == null || !email.contains("@")) return false;
+        var emailParts = tokens(email.substring(0, email.indexOf('@')));
+        var nameParts = tokens(displayName);
+        if (emailParts.size() < 2 || nameParts.size() < 2 || nameParts.size() > emailParts.size()) {
+            return false;
+        }
+        for (int index = 0; index < nameParts.size(); index++) {
+            var expected = emailParts.get(index);
+            var actual = nameParts.get(index);
+            if (!actual.equals(expected)
+                    && !(actual.length() == 1 && actual.charAt(0) == expected.charAt(0))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static List<String> tokens(String value) {
+        var normalized =
+                Normalizer.normalize(value, Normalizer.Form.NFD)
+                        .replaceAll("\\p{M}", "")
+                        .toLowerCase(Locale.ROOT);
+        return Arrays.stream(normalized.split("[^a-z0-9]+"))
+                .filter(part -> !part.isBlank())
+                .toList();
     }
 
     private String displayName(

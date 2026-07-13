@@ -8,4 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CriterionRepository extends JpaRepository<Criterion, UUID> {
     List<Criterion> findByLevelCodeAndStatusOrderByCode(String levelCode, ConfigStatus status);
+
+    List<Criterion> findByLevelCodeAndVersionAndStatusOrderByCode(
+            String levelCode, int version, ConfigStatus status);
 }

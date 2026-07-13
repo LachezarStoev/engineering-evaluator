@@ -30,10 +30,42 @@ public class Criterion {
     @Column(name = "period_type")
     private String periodType;
 
+    @Column(name = "minimum_coverage")
+    private String minimumCoverage = "COMPLETE";
+
+    @Column(name = "custom_period_allowed")
+    private boolean customPeriodAllowed;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "criterion_scope")
+    private CriterionScope scope = CriterionScope.COMMON;
+
+    @Column(name = "track_code")
+    private String trackCode;
+
+    @Column(name = "team_key")
+    private String teamKey;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "proration_policy")
+    private ProrationPolicy prorationPolicy = ProrationPolicy.PROGRESS_ONLY;
+
+    @Column(name = "mandatory_criterion")
+    private boolean mandatory = true;
+
+    @Column(name = "rubric_text")
+    private String rubric;
+
+    @Column(name = "visualization_key")
+    private String visualization = "PROGRESS";
+
     private String operator;
 
     @Column(name = "threshold_value")
     private BigDecimal thresholdValue;
+
+    @Column(name = "threshold_max_value")
+    private BigDecimal thresholdMaxValue;
 
     @Enumerated(EnumType.STRING)
     private Aggregation aggregation = Aggregation.SUM;

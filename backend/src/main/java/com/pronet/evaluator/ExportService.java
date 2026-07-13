@@ -23,11 +23,13 @@ class ExportService {
             var s = wb.createSheet("Evaluation");
             String[] head = {
                 "Employee",
+                "Engineering track",
                 "Period",
                 "Level",
                 "Formula",
                 "Measured",
-                "Threshold",
+                "Expected for period",
+                "Full cadence target",
                 "Status",
                 "Coverage"
             };
@@ -37,21 +39,22 @@ class ExportService {
             for (var r : e.getResults()) {
                 var x = s.createRow(row++);
                 x.createCell(0).setCellValue(emp.getCanonicalEmail());
-                x.createCell(1).setCellValue(e.getPeriod());
-                x.createCell(2).setCellValue(e.getLevelCode());
-                x.createCell(3).setCellValue(r.getFormula());
-                x.createCell(4)
+                x.createCell(1).setCellValue(emp.getTrackCode());
+                x.createCell(2).setCellValue(e.getPeriod());
+                x.createCell(3).setCellValue(e.getLevelCode());
+                x.createCell(4).setCellValue(r.getFormula());
+                x.createCell(5)
                         .setCellValue(
                                 r.getMeasuredValue() == null
                                         ? ""
                                         : r.getMeasuredValue().toPlainString());
-                x.createCell(5)
+                x.createCell(6)
                         .setCellValue(
-                                r.getThresholdValue() == null
-                                        ? ""
-                                        : r.getThresholdValue().toPlainString());
-                x.createCell(6).setCellValue(r.getResultStatus().name());
-                x.createCell(7).setCellValue(r.getCoverage());
+                                target(r.getPeriodTargetValue(), r.getPeriodTargetMaxValue()));
+                x.createCell(7)
+                        .setCellValue(target(r.getThresholdValue(), r.getThresholdMaxValue()));
+                x.createCell(8).setCellValue(EvaluationService.displayStatus(r));
+                x.createCell(9).setCellValue(r.getCoverage());
             }
             for (int i = 0; i < head.length; i++) s.autoSizeColumn(i);
             wb.write(out);
@@ -72,20 +75,28 @@ class ExportService {
                     new Paragraph(
                             "Engineering Career Evaluation",
                             FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18)));
-            doc.add(new Paragraph(emp.getDisplayName() + " <" + emp.getCanonicalEmail() + ">"));
+            doc.add(
+                    new Paragraph(
+                            emp.getDisplayName()
+                                    + " <"
+                                    + emp.getCanonicalEmail()
+                                    + "> · "
+                                    + emp.getTrackCode()));
             doc.add(
                     new Paragraph(
                             e.getPeriod() + " · " + e.getLevelCode() + " · " + e.getStatus()));
             doc.add(new Paragraph(" "));
-            var table = new PdfPTable(new float[] {4, 1, 1, 1});
+            var table = new PdfPTable(new float[] {4, 1, 1, 1, 1});
             table.setWidthPercentage(100);
-            for (String h : java.util.List.of("Formula", "Value", "Target", "Status"))
+            for (String h :
+                    java.util.List.of("Formula", "Value", "Expected", "Full target", "Status"))
                 table.addCell(h);
             for (var r : e.getResults()) {
                 table.addCell(r.getFormula());
                 table.addCell(Objects.toString(r.getMeasuredValue(), "—"));
-                table.addCell(Objects.toString(r.getThresholdValue(), "—"));
-                table.addCell(r.getResultStatus().name());
+                table.addCell(target(r.getPeriodTargetValue(), r.getPeriodTargetMaxValue()));
+                table.addCell(target(r.getThresholdValue(), r.getThresholdMaxValue()));
+                table.addCell(EvaluationService.displayStatus(r));
             }
             doc.add(table);
             doc.close();
@@ -93,5 +104,12 @@ class ExportService {
         } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }
+    }
+
+    private static String target(java.math.BigDecimal minimum, java.math.BigDecimal maximum) {
+        if (minimum == null) return "—";
+        return maximum == null
+                ? minimum.toPlainString()
+                : minimum.toPlainString() + "–" + maximum.toPlainString();
     }
 }

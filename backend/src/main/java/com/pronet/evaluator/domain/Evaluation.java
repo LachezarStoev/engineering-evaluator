@@ -34,6 +34,10 @@ public class Evaluation {
     @Column(name = "period_timezone")
     private String periodTimezone = "Europe/Sofia";
 
+    @Column(name = "evaluation_mode")
+    @Enumerated(EnumType.STRING)
+    private EvaluationMode evaluationMode = EvaluationMode.SNAPSHOT;
+
     @Enumerated(EnumType.STRING)
     private EvaluationStatus status;
 

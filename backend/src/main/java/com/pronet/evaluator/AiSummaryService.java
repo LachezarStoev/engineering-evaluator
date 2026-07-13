@@ -13,6 +13,7 @@ import org.springframework.web.client.RestClient;
 @RequiredArgsConstructor
 class AiSummaryService {
     private final EvaluationRepository evaluations;
+    private final EmployeeRepository employees;
     private final AppProperties properties;
 
     record Summary(String text, boolean aiGenerated, String model, String disclaimer) {}
@@ -20,27 +21,46 @@ class AiSummaryService {
     Summary summarize(UUID id) {
         var ai = properties.ai();
         var e = evaluations.findById(id).orElseThrow();
-        long
-                pass =
-                        e.getResults().stream()
-                                .filter(r -> r.getResultStatus() == ResultStatus.PASS)
-                                .count(),
-                review =
-                        e.getResults().stream()
-                                .filter(r -> r.getResultStatus() == ResultStatus.NEEDS_REVIEW)
-                                .count();
+        var employee = employees.findById(e.getEmployeeId()).orElseThrow();
+        var counts =
+                e.getResults().stream()
+                        .collect(
+                                java.util.stream.Collectors.groupingBy(
+                                        CriterionResult::getResultStatus,
+                                        () -> new EnumMap<>(ResultStatus.class),
+                                        java.util.stream.Collectors.counting()));
         String facts =
                 "Period "
                         + e.getPeriod()
+                        + ", engineering track "
+                        + employee.getTrackCode()
                         + ", level "
                         + e.getLevelCode()
-                        + ", "
-                        + pass
-                        + " passed, "
-                        + review
-                        + " need human review. Results: "
+                        + ", mode "
+                        + e.getEvaluationMode()
+                        + ". Status counts: "
+                        + counts
+                        + ". Results: "
                         + e.getResults().stream()
-                                .map(r -> r.getFormula() + " => " + r.getResultStatus())
+                                .map(
+                                        r ->
+                                                r.getFormula()
+                                                        + " measured="
+                                                        + r.getMeasuredValue()
+                                                        + ", expected-for-period="
+                                                        + r.getPeriodTargetValue()
+                                                        + (r.getPeriodTargetMaxValue() == null
+                                                                ? ""
+                                                                : ".."
+                                                                        + r
+                                                                                .getPeriodTargetMaxValue())
+                                                        + ", full-target="
+                                                        + r.getThresholdValue()
+                                                        + (r.getThresholdMaxValue() == null
+                                                                ? ""
+                                                                : ".." + r.getThresholdMaxValue())
+                                                        + " => "
+                                                        + EvaluationService.displayStatus(r))
                                 .toList();
         if (ai.baseUrl().isBlank() || ai.apiKey().isBlank() || ai.model().isBlank())
             return new Summary(

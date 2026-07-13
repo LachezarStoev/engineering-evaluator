@@ -30,6 +30,9 @@ public class Employee {
     @Column(name = "target_level_code")
     private String targetLevelCode;
 
+    @Column(name = "track_code")
+    private String trackCode = "GENERAL";
+
     @Column(name = "employment_start")
     private LocalDate employmentStart;
 
