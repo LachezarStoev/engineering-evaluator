@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:h2:mem:evaluator;MODE=PostgreSQL;DB_CLOSE_DELAY=-1}
+    username: ${DATABASE_USERNAME:sa}
+    password: ${DATABASE_PASSWORD:}
+  jpa:
+    hibernate.ddl-auto: validate
+    open-in-view: false
+  flyway.enabled: true
+  security.oauth2.resourceserver.jwt.issuer-uri: ${OIDC_ISSUER_URI:}
+app:
+  time-zone: "${APP_TIME_ZONE:Europe/Sofia}"
+  security:
+    dev-mode: ${DEV_AUTH_ENABLED:true}
+  sync:
+    cron: "${SYNC_CRON:0 15 2 * * *}"
+  ai:
+    base-url: "${AI_BASE_URL:}"
+    api-key: "${AI_API_KEY:}"
+    model: "${AI_MODEL:}"
+management.endpoints.web.exposure.include: health,info,metrics
+connectors:
+  gitlab:
+    url: "${GITLAB_URL:}"
+    token: "${GITLAB_TOKEN:}"
+  jira:
+    url: "${JIRA_URL:}"
+    email: "${JIRA_EMAIL:}"
+    token: "${JIRA_TOKEN:}"
+  confluence:
+    url: "${CONFLUENCE_URL:}"
+    email: "${CONFLUENCE_EMAIL:${JIRA_EMAIL:}}"
+    token: "${CONFLUENCE_TOKEN:}"

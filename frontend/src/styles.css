@@ -1,0 +1,266 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui;
+  color: #17211d;
+  background: #f3f5ef;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+header {
+  min-height: 106px;
+  background: #173f35;
+  color: white;
+  padding: 24px max(5vw, 32px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+h1,
+h2,
+p {
+  margin: 0;
+}
+header small {
+  color: #a7d8be;
+  letter-spacing: 2px;
+  font-weight: 700;
+}
+header h1 {
+  font-size: 28px;
+  margin-top: 4px;
+}
+nav {
+  display: flex;
+  gap: 7px;
+}
+nav button {
+  border: 0;
+  background: #ffffff16;
+  color: #dce9e3;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+nav button.active {
+  background: #d5fb72;
+  color: #173f35;
+  font-weight: 800;
+}
+.badge,
+.status {
+  border: 1px solid #6f9c89;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 12px;
+}
+main {
+  max-width: 1140px;
+  margin: 40px auto;
+  padding: 0 24px;
+}
+.search,
+.profile,
+.panel,
+.empty {
+  background: #fff;
+  border: 1px solid #dfe5dd;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 18px;
+  box-shadow: 0 6px 24px #1c3f3520;
+}
+.search label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.search div {
+  display: flex;
+  gap: 10px;
+}
+input,
+select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #bfcac3;
+  border-radius: 8px;
+  font-size: 15px;
+  background: white;
+}
+.search input {
+  flex: 1;
+}
+.search button,
+main button {
+  background: #d5fb72;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-weight: 800;
+}
+.search p,
+.profile p,
+.empty p {
+  color: #68736e;
+  margin-top: 10px;
+}
+.profile,
+.profile > div,
+.panel-title,
+article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.profile > div {
+  gap: 14px;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  background: #173f35;
+  color: #fff;
+  border-radius: 12px;
+  font-weight: 800;
+}
+.panel-title {
+  border-bottom: 1px solid #e5e9e4;
+  padding-bottom: 18px;
+}
+.panel-title small {
+  color: #6b756f;
+}
+.panel article {
+  padding: 18px 0;
+  border-bottom: 1px solid #edf0ec;
+  gap: 14px;
+}
+.panel article:last-child {
+  border: 0;
+}
+.dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #d1a832;
+}
+.dot.pass {
+  background: #2aae68;
+}
+.dot.fail {
+  background: #dc5a52;
+}
+.metric {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.metric small,
+.value span {
+  color: #78817d;
+}
+.value {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.error,
+.notice {
+  padding: 16px;
+  border-radius: 10px;
+  margin-bottom: 18px;
+}
+.error {
+  background: #fee4e1;
+  color: #912f28;
+}
+.notice {
+  background: #e2f7e9;
+  color: #17633a;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.grid .panel {
+  margin: 0;
+}
+.grid label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 14px;
+}
+.grid label input,
+.grid label select {
+  margin-top: 6px;
+}
+.grid .panel > button {
+  margin-top: 18px;
+}
+.actions,
+.inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.actions a,
+.inline-actions button {
+  font-size: 12px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: #edf2ed;
+  color: #174537;
+  text-decoration: none;
+  border: 0;
+}
+.summary {
+  background: #f0f6e3;
+  border-left: 4px solid #9fc43c;
+  padding: 16px;
+  margin-top: 12px;
+}
+.summary p {
+  margin-top: 8px;
+  line-height: 1.5;
+}
+@media (max-width: 700px) {
+  header {
+    align-items: flex-start;
+    gap: 20px;
+    flex-direction: column;
+  }
+  nav {
+    width: 100%;
+    overflow: auto;
+  }
+  .search div,
+  .grid {
+    display: flex;
+    flex-direction: column;
+  }
+  .search button {
+    padding: 14px;
+  }
+  .panel article {
+    align-items: flex-start;
+  }
+  .panel-title {
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .value {
+    min-width: 90px;
+  }
+}

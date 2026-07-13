@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: evaluator
+      POSTGRES_USER: evaluator
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes: [evaluator-data:/var/lib/postgresql/data]
+    healthcheck: {test: ["CMD-SHELL", "pg_isready -U evaluator"], interval: 5s, timeout: 3s, retries: 20}
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/evaluator
+      DATABASE_USERNAME: evaluator
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      DEV_AUTH_ENABLED: ${DEV_AUTH_ENABLED:-true}
+      OIDC_ISSUER_URI: ${OIDC_ISSUER_URI:-}
+      GITLAB_URL: ${GITLAB_URL:-}
+      GITLAB_TOKEN: ${GITLAB_TOKEN:-}
+      JIRA_URL: ${JIRA_URL:-}
+      JIRA_EMAIL: ${JIRA_EMAIL:-}
+      JIRA_TOKEN: ${JIRA_TOKEN:-}
+      CONFLUENCE_URL: ${CONFLUENCE_URL:-}
+      CONFLUENCE_EMAIL: ${CONFLUENCE_EMAIL:-${JIRA_EMAIL:-}}
+      CONFLUENCE_TOKEN: ${CONFLUENCE_TOKEN:-}
+      SYNC_CRON: ${SYNC_CRON:-0 15 2 * * *}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-}
+    depends_on: {postgres: {condition: service_healthy}}
+    healthcheck: {test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"], interval: 10s, timeout: 3s, retries: 20}
+  frontend:
+    build: ./frontend
+    ports: ["${APP_PORT:-8088}:80"]
+    depends_on: [backend]
+volumes: {evaluator-data: {}}
