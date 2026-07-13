@@ -21,20 +21,25 @@ import type {
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: ` <header>
-      <div>
-        <small>ENGINEERING INTELLIGENCE</small>
-        <h1>Career Matrix</h1>
+      <div class="header-inner">
+        <div class="brand">
+          <span class="brand-mark">CM</span>
+          <div>
+            <small>ENGINEERING INTELLIGENCE</small>
+            <h1>Career Matrix</h1>
+          </div>
+        </div>
+        <nav>
+          <button [class.active]="tab === 'report'" (click)="tab = 'report'">Report</button
+          ><button [class.active]="tab === 'admin'" (click)="openAdmin()">Administration</button
+          ><button
+            [class.active]="tab === 'integrations'"
+            (click)="tab = 'integrations'; loadHealth(); loadOnboarding()"
+          >
+            Integrations
+          </button>
+        </nav>
       </div>
-      <nav>
-        <button [class.active]="tab === 'report'" (click)="tab = 'report'">Report</button
-        ><button [class.active]="tab === 'admin'" (click)="openAdmin()">Administration</button
-        ><button
-          [class.active]="tab === 'integrations'"
-          (click)="tab = 'integrations'; loadHealth(); loadOnboarding()"
-        >
-          Integrations
-        </button>
-      </nav>
     </header>
     <main>
       <section *ngIf="notice" class="notice">{{ notice }}</section>
@@ -63,29 +68,33 @@ import type {
           </div>
           <strong>{{ employee.targetLevelCode || employee.currentLevelCode }}</strong>
         </section>
-        <section *ngFor="let evaluation of evaluations" class="panel">
+        <section *ngFor="let evaluation of evaluations" class="panel evaluation-panel">
           <div class="panel-title">
             <div>
-              <small>{{ evaluation.period }} · {{ evaluation.periodTimezone || 'UTC' }}</small>
+              <small
+                >{{ displayPeriod(evaluation.period) }} ·
+                {{ evaluation.periodTimezone || 'UTC' }}</small
+              >
               <h2>{{ evaluation.levelCode }} evaluation</h2>
             </div>
             <div class="actions">
               <a [href]="'/api/v1/evaluations/' + evaluation.id + '/export.pdf'">PDF</a
               ><a [href]="'/api/v1/evaluations/' + evaluation.id + '/export.xlsx'">Excel</a
               ><button (click)="summary(evaluation.id)">AI summary</button
-              ><span class="status">{{ evaluation.status }}</span>
+              ><span class="status status-neutral">{{ displayLabel(evaluation.status) }}</span>
             </div>
           </div>
-          <article *ngFor="let result of evaluation.results">
+          <article *ngFor="let result of evaluation.results" class="result-row">
             <span
               class="dot"
               [class.pass]="result.resultStatus === 'PASS'"
               [class.fail]="result.resultStatus === 'FAIL'"
+              [class.no-data]="result.resultStatus === 'NO_DATA'"
             ></span>
             <div class="metric">
-              <strong>{{ result.formula }}</strong
-              ><small
-                >Coverage: {{ result.coverage }}
+              <code class="formula">{{ prettyFormula(result.formula) }}</code
+              ><small class="coverage"
+                >Coverage · {{ displayLabel(result.coverage) }}
                 <span *ngIf="result.managerNote">· Manager: {{ result.managerNote }}</span></small
               >
               <div class="inline-actions" *ngIf="!evaluation.finalized">
@@ -96,7 +105,9 @@ import type {
             </div>
             <div class="value">
               <strong>{{ result.measuredValue ?? '—' }} / {{ result.thresholdValue ?? '—' }}</strong
-              ><span>{{ result.resultStatus }}</span>
+              ><span class="result-state" [attr.data-state]="result.resultStatus">{{
+                displayLabel(result.resultStatus)
+              }}</span>
             </div>
           </article>
           <div *ngIf="aiSummary[evaluation.id]" class="summary">
@@ -113,19 +124,22 @@ import type {
             </button>
           </div>
           <section *ngIf="evidenceByEvaluation[evaluation.id]" class="evidence-list">
-            <div class="evidence-tags">
+            <div class="metric-cards">
               <span *ngFor="let metric of metricSummary(evidenceByEvaluation[evaluation.id] || [])"
-                ><b>{{ metric.key }}:</b> {{ metric.value }}</span
+                ><small>{{ displayLabel(metric.key) }}</small
+                ><b>{{ metric.value }}</b></span
               >
             </div>
-            <article *ngFor="let item of evidenceByEvaluation[evaluation.id]">
+            <article *ngFor="let item of evidenceByEvaluation[evaluation.id]" class="evidence-row">
               <div class="metric">
-                <small
-                  >{{ item.occurredAt | date: 'medium' }} · {{ item.toolKey | uppercase }} ·
-                  {{ item.metricKey }}</small
-                ><strong>{{ item.title }}</strong>
-                <p *ngIf="detail(item) as d">{{ d }}</p>
-                <div class="evidence-tags">
+                <div class="evidence-meta">
+                  <time>{{ item.occurredAt | date: 'medium' }}</time>
+                  <span class="tool-badge">{{ item.toolKey | uppercase }}</span>
+                  <span>{{ displayLabel(item.metricKey) }}</span>
+                </div>
+                <strong class="evidence-title">{{ item.title }}</strong>
+                <p *ngIf="detail(item) as d" class="evidence-detail">{{ d }}</p>
+                <div class="attribute-grid">
                   <span *ngFor="let pair of attributes(item)"
                     ><b>{{ pair[0] }}:</b> {{ pair[1] }}</span
                   >
@@ -134,8 +148,8 @@ import type {
                   >Open source ↗</a
                 >
               </div>
-              <div class="value">
-                <strong>{{ item.numericValue }}</strong>
+              <div class="evidence-value">
+                <small>VALUE</small><strong>{{ item.numericValue }}</strong>
               </div>
             </article>
             <div *ngIf="evidenceByEvaluation[evaluation.id]?.length === 0" class="empty">
@@ -169,7 +183,7 @@ import type {
       </ng-container>
 
       <ng-container *ngIf="tab === 'admin'">
-        <section class="setup-note">
+        <section class="info-banner">
           The five engineering levels and their standard criteria are preloaded. Use this screen
           only to add employees or deliberately publish a new version of a level or criterion.
         </section>
@@ -181,17 +195,19 @@ import type {
             </div>
             <span class="status">{{ levels.length }} LEVELS · {{ criteria.length }} CRITERIA</span>
           </div>
-          <article *ngFor="let level of levels">
+          <article *ngFor="let level of levels" class="level-row">
             <div class="metric">
               <strong>{{ level.code }} · {{ level.name }}</strong
               ><small>Version {{ level.version }} · {{ level.status }}</small>
-              <div class="evidence-tags">
-                <span *ngFor="let criterion of criteriaFor(level.code)"
-                  ><b>{{ criterion.name }}:</b> {{ criterion.aggregation }}({{
-                    criterion.sourceTool
-                  }}.{{ criterion.metricKey }}) {{ criterion.operator }}
-                  {{ criterion.thresholdValue }}</span
-                >
+              <div class="criteria-grid">
+                <div *ngFor="let criterion of criteriaFor(level.code)" class="criterion-card">
+                  <span class="tool-badge">{{ criterion.sourceTool | uppercase }}</span>
+                  <b>{{ criterion.name }}</b>
+                  <code
+                    >{{ criterion.aggregation }}({{ criterion.metricKey }})
+                    {{ prettyOperator(criterion.operator) }} {{ criterion.thresholdValue }}</code
+                  >
+                </div>
               </div>
             </div>
           </article>
@@ -290,11 +306,11 @@ import type {
             <code>.env</code>. They are never sent to or stored by this browser. In production,
             provide the same variables through the deployment secret manager.
           </p>
-          <article *ngFor="let item of onboarding">
+          <article *ngFor="let item of onboarding" class="integration-row">
             <div class="metric">
               <strong>{{ item.name }}</strong
               ><small>{{ item.instructions }}</small>
-              <div class="evidence-tags">
+              <div class="env-tags">
                 <code *ngFor="let variable of item.environmentVariables">{{ variable }}</code>
               </div>
               <div class="inline-actions">
@@ -302,7 +318,12 @@ import type {
                 ><a *ngIf="item.tokenUrl" [href]="item.tokenUrl">Create token</a>
               </div>
             </div>
-            <span class="status">{{ item.configured ? 'CONFIGURED' : 'SETUP REQUIRED' }}</span>
+            <span
+              class="status"
+              [class.status-ok]="item.configured"
+              [class.status-warning]="!item.configured"
+              >{{ item.configured ? 'CONFIGURED' : 'SETUP REQUIRED' }}</span
+            >
           </article>
         </section>
         <section class="panel">
@@ -318,10 +339,12 @@ import type {
               <strong>{{ item.displayName }}</strong
               ><small
                 >{{ item.baseUrl || 'Configured through environment' }} · last sync
-                {{ item.lastSyncAt || 'never' }}</small
+                {{ item.lastSyncAt ? (item.lastSyncAt | date: 'medium') : 'never' }}</small
               >
             </div>
-            <span class="status">{{ item.healthStatus }}</span>
+            <span class="status" [class.status-ok]="item.healthStatus === 'HEALTHY'">{{
+              displayLabel(item.healthStatus)
+            }}</span>
           </article>
           <div class="empty" *ngIf="!health.length">
             No synchronization has run. Configure URLs and tokens in <code>.env</code>, confirm
@@ -433,7 +456,7 @@ export class AppComponent {
 
   load(): void {
     this.error = '';
-    this.api.employee(this.email).subscribe({
+    this.api.resolveEmployee(this.email).subscribe({
       next: (employee) => {
         this.employee = employee;
         this.evaluationForm.email = employee.canonicalEmail;
@@ -581,6 +604,25 @@ export class AppComponent {
         );
     }
     return [...totals].map(([key, value]) => ({ key: key.replaceAll('_', ' '), value }));
+  }
+
+  displayLabel(value: string): string {
+    return value
+      .replaceAll('_', ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+
+  displayPeriod(period: string): string {
+    return period.replace('..', ' → ');
+  }
+
+  prettyOperator(operator: string): string {
+    return operator.replace('>=', '≥').replace('<=', '≤');
+  }
+
+  prettyFormula(formula: string): string {
+    return this.prettyOperator(formula.replace(/(\d+)\.0{1,4}\b/g, '$1'));
   }
 
   loadHealth(): void {

@@ -40,6 +40,12 @@ class ApiController {
         return lookup(email);
     }
 
+    @PostMapping("/employees/resolve/{email}")
+    @PreAuthorize("@access.canViewEmployee(#email, authentication)")
+    Employee resolveEmployee(@PathVariable String email) {
+        return identityDiscovery.findOrProvision(email);
+    }
+
     private Employee lookup(String email) {
         return employees
                 .findByCanonicalEmailIgnoreCase(EvaluationService.normalize(email))

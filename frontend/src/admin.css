@@ -1,27 +1,45 @@
 .search-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
+  align-items: end;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.search-row label {
   display: flex;
-  gap: 10px;
-  margin-top: 14px;
+  flex-direction: column;
+  gap: 6px;
+  color: #52625b;
+  font-size: 12px;
+  font-weight: 750;
 }
-.search-row input {
-  flex: 1;
-}
+
 .candidate {
-  padding: 7px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #dfe7e2;
+  border-radius: 9px;
+  background: #f7faf8;
 }
+
 .candidate button {
   padding: 6px 9px;
   font-size: 12px;
-  margin-left: 8px;
 }
+
 .admin-group {
   background: #fff;
   border: 1px solid #dfe5dd;
   border-radius: 16px;
   margin-bottom: 18px;
-  box-shadow: 0 6px 24px #1c3f3520;
+  box-shadow: 0 6px 24px #1c3f3515;
   overflow: hidden;
 }
+
 .admin-group > summary {
   cursor: pointer;
   padding: 20px 24px;
@@ -30,41 +48,95 @@
   justify-content: space-between;
   list-style: none;
 }
+
 .admin-group > summary::-webkit-details-marker {
   display: none;
 }
+
 .admin-group > summary span:first-child {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
+
 .admin-group > summary small {
   color: #78817d;
 }
+
 .admin-group[open] > summary {
   border-bottom: 1px solid #e5e9e4;
+  background: #fafcf9;
 }
+
 .admin-form {
   box-shadow: none;
   border: 0;
   margin: 0;
 }
+
 .admin-content {
   padding: 18px;
 }
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
+
 .admin-form > button {
   margin-top: 18px;
 }
-@media (max-width: 700px) {
-  .search-row {
+
+.level-row {
+  align-items: flex-start !important;
+}
+
+.criteria-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.criterion-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 6px 9px;
+  padding: 12px;
+  border: 1px solid #dfe7e2;
+  border-radius: 10px;
+  background: #f8faf8;
+}
+
+.criterion-card b {
+  font-size: 13px;
+}
+
+.criterion-card code {
+  grid-column: 1 / -1;
+  color: #52625b;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.integration-row {
+  align-items: flex-start !important;
+}
+
+@media (max-width: 760px) {
+  .search-row,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .candidate {
+    align-items: flex-start;
     flex-direction: column;
   }
-  .form-grid {
+
+  .criteria-grid {
     grid-template-columns: 1fr;
   }
 }

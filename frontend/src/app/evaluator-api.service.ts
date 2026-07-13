@@ -22,6 +22,9 @@ export class EvaluatorApi {
   employee(email: string) {
     return this.http.get<Employee>(`/api/v1/employees/by-email/${encodeURIComponent(email)}`);
   }
+  resolveEmployee(email: string) {
+    return this.http.post<Employee>(`/api/v1/employees/resolve/${encodeURIComponent(email)}`, {});
+  }
   levels() {
     return this.http.get<EngineeringLevel[]>('/api/v1/levels');
   }

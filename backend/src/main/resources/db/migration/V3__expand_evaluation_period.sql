@@ -1,1 +1,1 @@
-alter table evaluation alter column period varchar(64);
+alter table evaluation alter column period type varchar(64);

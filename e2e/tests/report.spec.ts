@@ -59,7 +59,7 @@ test('employee sees transparent calculation and evidence-ready report', async ({
   await page.getByPlaceholder('developer@company.com').fill(email);
   await page.getByRole('button', { name: 'Open report' }).click();
   await expect(page.getByText('E2E Developer')).toBeVisible();
-  await expect(page.getByText('PASS', { exact: true })).toBeVisible();
+  await expect(page.getByText('Pass', { exact: true })).toBeVisible();
   await expect(page.getByText(new RegExp(`SUM\\(jira\\.${metricKey}\\)`))).toBeVisible();
 });
 

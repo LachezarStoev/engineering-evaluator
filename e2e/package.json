@@ -1,1 +1,12 @@
-{"name":"engineering-evaluator-e2e","private":true,"scripts":{"test":"playwright test"},"devDependencies":{"@playwright/test":"^1.53.1"}}
+{
+  "name": "engineering-evaluator-e2e",
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "engines": { "node": ">=22 <23" },
+  "scripts": {
+    "test": "sh ./run-e2e.sh"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.53.1"
+  }
+}

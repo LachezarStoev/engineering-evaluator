@@ -18,6 +18,42 @@ class IdentityDiscoveryService {
 
     List<Discovery> discover(String email) {
         employees.findByCanonicalEmailIgnoreCase(EvaluationService.normalize(email)).orElseThrow();
+        return discoverFromConnectors(email);
+    }
+
+    @Transactional
+    Employee findOrProvision(String email) {
+        var normalizedEmail = EvaluationService.normalize(email);
+        var existing = employees.findByCanonicalEmailIgnoreCase(normalizedEmail);
+        if (existing.isPresent()) return existing.get();
+
+        var discoveries = discoverFromConnectors(normalizedEmail);
+        List<Map.Entry<String, IdentityCandidate>> exactMatches = new ArrayList<>();
+        for (var discovery : discoveries) {
+            var candidates =
+                    discovery.candidates().stream().filter(IdentityCandidate::exactMatch).toList();
+            if (candidates.size() == 1) {
+                exactMatches.add(Map.entry(discovery.tool(), candidates.getFirst()));
+            }
+        }
+        if (exactMatches.isEmpty()) {
+            throw new NoSuchElementException(
+                    "Employee not found in the configured integrations: " + normalizedEmail);
+        }
+
+        var employee = new Employee();
+        employee.setCanonicalEmail(normalizedEmail);
+        employee.setDisplayName(displayName(normalizedEmail, exactMatches));
+        employee.setTeam("Engineering");
+        employee = employees.save(employee);
+
+        for (var match : exactMatches) {
+            confirm(employee, match.getKey(), match.getValue());
+        }
+        return employee;
+    }
+
+    private List<Discovery> discoverFromConnectors(String email) {
         var discovered =
                 new ArrayList<>(
                         connectors.stream()
@@ -67,6 +103,31 @@ class IdentityDiscoveryService {
         return discovered;
     }
 
+    private String displayName(
+            String email, List<Map.Entry<String, IdentityCandidate>> exactMatches) {
+        return exactMatches.stream()
+                .sorted(Comparator.comparing(match -> match.getKey().equals("jira") ? 0 : 1))
+                .map(Map.Entry::getValue)
+                .map(IdentityCandidate::username)
+                .filter(value -> value != null && !value.isBlank())
+                .map(this::humanizeIdentityName)
+                .findFirst()
+                .orElseGet(() -> humanizeEmail(email));
+    }
+
+    private String humanizeEmail(String email) {
+        return humanizeIdentityName(email.substring(0, email.indexOf('@')));
+    }
+
+    private String humanizeIdentityName(String value) {
+        if (!value.matches(".*[._-].*")) return value;
+        return Arrays.stream(value.split("[._-]+"))
+                .filter(part -> !part.isBlank())
+                .map(part -> Character.toUpperCase(part.charAt(0)) + part.substring(1))
+                .reduce((left, right) -> left + " " + right)
+                .orElse(value);
+    }
+
     @Transactional
     List<ExternalIdentity> autoConfirmExact(String email) {
         List<ExternalIdentity> confirmed = new ArrayList<>();
@@ -94,15 +155,19 @@ class IdentityDiscoveryService {
                 employees
                         .findByCanonicalEmailIgnoreCase(EvaluationService.normalize(email))
                         .orElseThrow();
+        return confirm(e, tool, new IdentityCandidate(externalId, username, matchedEmail, true));
+    }
+
+    private ExternalIdentity confirm(Employee employee, String tool, IdentityCandidate candidate) {
         var i =
                 identities
-                        .findByEmployeeIdAndToolKey(e.getId(), tool)
+                        .findByEmployeeIdAndToolKey(employee.getId(), tool)
                         .orElseGet(ExternalIdentity::new);
-        i.setEmployeeId(e.getId());
+        i.setEmployeeId(employee.getId());
         i.setToolKey(tool);
-        i.setExternalUserId(externalId);
-        i.setUsername(username);
-        i.setMatchedEmail(EvaluationService.normalize(matchedEmail));
+        i.setExternalUserId(candidate.externalUserId());
+        i.setUsername(candidate.username());
+        i.setMatchedEmail(EvaluationService.normalize(candidate.email()));
         i.setVerified(true);
         return identities.save(i);
     }

@@ -244,7 +244,7 @@ Administration first shows the currently published matrix. Normal report calcula
 
 Advanced actions are collapsed and separated by responsibility:
 
-- **People onboarding** is for exceptional manual provisioning. The current build requires an employee record; a production directory/SSO adapter should provision it automatically.
+- **People onboarding** is for exceptional manual provisioning. Opening a report now resolves an unknown corporate email globally through the configured connectors, creates the employee only when exactly one source identity matches, and stores the confirmed identities. A production directory/SSO adapter can later provide richer organization metadata such as team, manager, and level.
 - **Matrix versioning** is for deliberate publication of a new level or criterion version.
 
 Existing published criteria should be versioned rather than silently edited. A finalized historical evaluation continues to reference its original rule version.
@@ -291,7 +291,8 @@ For production:
 
 ## Local development
 
-Requirements: Java 21, Maven, Node.js, and npm.
+Requirements: Java 21, Maven, Node.js 22, npm 10, and Docker for the end-to-end suite. The
+repository-level `.nvmrc` selects the supported Node.js major version.
 
 ```bash
 # Backend
@@ -300,7 +301,7 @@ mvn spring-boot:run
 
 # Frontend
 cd frontend
-npm install
+npm ci
 npm start
 ```
 
@@ -320,6 +321,10 @@ npm run quality
 cd ../e2e
 npm test
 ```
+
+The end-to-end command owns an isolated Docker Compose project on port `18088`. It starts a clean
+PostgreSQL database, backend, and frontend, then removes the containers, network, and database
+volume even when a test fails. It never reuses the normal local `evaluator-data` volume.
 
 Formatting:
 
