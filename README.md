@@ -1,5 +1,7 @@
 # Engineering Career Matrix
 
+[![Continuous Integration](https://github.com/LachezarStoev/engineering-evaluator/actions/workflows/ci.yml/badge.svg)](https://github.com/LachezarStoev/engineering-evaluator/actions/workflows/ci.yml)
+
 Transparent engineering evaluations backed by Jira, GitLab, and Confluence evidence.
 
 The platform collects read-only activity, calculates versioned criteria with deterministic rules,
@@ -7,16 +9,23 @@ shows the evidence behind every result, and keeps AI and management judgment in 
 layers. It supports career conversations; it is not an automatic promotion engine or an employee
 ranking system.
 
+## At a glance
+
+| Evidence                  | Calculation                   | Fairness                          | Delivery              |
+| ------------------------- | ----------------------------- | --------------------------------- | --------------------- |
+| Jira, GitLab, Confluence  | Versioned deterministic rules | Visible formulas and source links | Angular + Spring Boot |
+| Global identity discovery | Explicit coverage states      | Developer dispute workflow        | PostgreSQL + Docker   |
+| Read-only connectors      | AI is advisory only           | Human final decision              | PDF and Excel exports |
+
 ## How it works
 
-**Collect → Calculate → Review**
+| **① Collect**              | **② Calculate**                   | **③ Review**                           |
+| :------------------------- | :-------------------------------- | :------------------------------------- |
+| Jira · GitLab · Confluence | Versioned deterministic formulas  | Advisory AI summary                    |
+| Read-only synchronization  | Metrics and coverage states       | Developer verification or dispute      |
+| Normalize and deduplicate  | Reproducible source-linked result | Manager decision, finalization, export |
 
-1. **Collect** — Synchronize read-only Jira, GitLab, and Confluence activity into normalized,
-   deduplicated evidence.
-2. **Calculate** — Apply versioned deterministic formulas and produce reproducible metrics, data
-   coverage, and source links.
-3. **Review** — Use AI only as an advisory summary, let the developer verify or dispute evidence,
-   and record the manager's final reasoned decision and export.
+**Collect → Calculate → Review**
 
 The boundary is intentional: connectors establish what happened, formulas calculate measurable
 results, AI explains supplied facts, and authorized people make the career decision.
