@@ -196,78 +196,85 @@ import type {
             </div>
           </article>
         </section>
-        <div class="grid">
-          <section class="panel">
-            <h2>Add employee</h2>
-            <label>Email<input [(ngModel)]="employeeForm.email" /></label
-            ><label>Name<input [(ngModel)]="employeeForm.displayName" /></label
-            ><label>Team<input [(ngModel)]="employeeForm.team" /></label
-            ><label>Manager email<input [(ngModel)]="employeeForm.managerEmail" /></label
-            ><label>Current level<input [(ngModel)]="employeeForm.currentLevelCode" /></label
-            ><button (click)="createEmployee()">Create employee</button>
+        <details class="admin-group">
+          <summary>
+            <span><b>People onboarding</b><small>Organization administrators only</small></span>
+            <span class="status">ADVANCED</span>
+          </summary>
+          <section class="panel admin-form">
+            <h2>Add employee manually</h2>
+            <p class="setup-note">
+              Use only when an employee cannot be provisioned from SSO or the company directory.
+              Source-system identities are still discovered automatically by corporate email.
+            </p>
+            <div class="form-grid">
+              <label>Email<input [(ngModel)]="employeeForm.email" /></label
+              ><label>Name<input [(ngModel)]="employeeForm.displayName" /></label
+              ><label>Team<input [(ngModel)]="employeeForm.team" /></label
+              ><label>Manager email<input [(ngModel)]="employeeForm.managerEmail" /></label
+              ><label>Current level<input [(ngModel)]="employeeForm.currentLevelCode" /></label>
+            </div>
+            <button (click)="createEmployee()">Create employee</button>
           </section>
-          <section class="panel">
-            <h2>Add or version level</h2>
-            <label>Code<input [(ngModel)]="levelForm.code" /></label
-            ><label>Name<input [(ngModel)]="levelForm.name" /></label
-            ><label>Order<input type="number" [(ngModel)]="levelForm.ordinal" /></label
-            ><label>Version<input type="number" [(ngModel)]="levelForm.version" /></label
-            ><button (click)="createLevel()">Publish level</button>
-          </section>
-          <section class="panel">
-            <h2>Add criterion</h2>
-            <label>Code<input [(ngModel)]="criterionForm.code" /></label
-            ><label>Name<input [(ngModel)]="criterionForm.name" /></label
-            ><label
-              >Tool<select [(ngModel)]="criterionForm.sourceTool">
-                <option>gitlab</option>
-                <option>jira</option>
-                <option>confluence</option>
-              </select></label
-            ><label>Metric key<input [(ngModel)]="criterionForm.metricKey" /></label
-            ><label
-              >Aggregation<select [(ngModel)]="criterionForm.aggregation">
-                <option>SUM</option>
-                <option>COUNT</option>
-                <option>RATIO</option>
-              </select></label
-            ><label *ngIf="criterionForm.aggregation === 'RATIO'"
-              >Denominator metric<input [(ngModel)]="criterionForm.denominatorMetricKey" /></label
-            ><label>Level<input [(ngModel)]="criterionForm.levelCode" /></label
-            ><label
-              >Operator<select [(ngModel)]="criterionForm.operator">
-                <option>>=</option>
-                <option><=</option>
-                <option>></option>
-                <option><</option>
-                <option>=</option>
-              </select></label
-            ><label>Threshold<input type="number" [(ngModel)]="criterionForm.threshold" /></label
-            ><label
-              >Type<select [(ngModel)]="criterionForm.evaluationType">
-                <option>AUTOMATIC</option>
-                <option>AUTOMATIC_WITH_REVIEW</option>
-                <option>MANAGER_REVIEWED</option>
-                <option>EVIDENCE_ONLY</option>
-              </select></label
-            ><button (click)="createCriterion()">Publish criterion</button>
-          </section>
-          <section class="panel">
-            <h2>Calculate report</h2>
-            <label>Email<input [(ngModel)]="evaluationForm.email" /></label
-            ><label
-              >Optional quarter/label<input
-                [(ngModel)]="evaluationForm.period"
-                placeholder="2026-Q3" /></label
-            ><label>From<input type="date" [(ngModel)]="evaluationForm.from" /></label
-            ><label>To, inclusive<input type="date" [(ngModel)]="evaluationForm.to" /></label
-            ><label>Timezone<input [(ngModel)]="evaluationForm.timezone" /></label
-            ><label>Level<input [(ngModel)]="evaluationForm.levelCode" /></label
-            ><label
-              >Rule version<input type="number" [(ngModel)]="evaluationForm.ruleVersion" /></label
-            ><button (click)="calculate()">Calculate</button>
-          </section>
-        </div>
+        </details>
+
+        <details class="admin-group">
+          <summary>
+            <span
+              ><b>Matrix versioning</b
+              ><small>Evaluator administrators only · changes are auditable</small></span
+            >
+            <span class="status">ADVANCED</span>
+          </summary>
+          <div class="grid admin-content">
+            <section class="panel">
+              <h2>Publish a level version</h2>
+              <label>Code<input [(ngModel)]="levelForm.code" /></label
+              ><label>Name<input [(ngModel)]="levelForm.name" /></label
+              ><label>Order<input type="number" [(ngModel)]="levelForm.ordinal" /></label
+              ><label>Version<input type="number" [(ngModel)]="levelForm.version" /></label
+              ><button (click)="createLevel()">Publish level</button>
+            </section>
+            <section class="panel">
+              <h2>Publish a criterion version</h2>
+              <label>Code<input [(ngModel)]="criterionForm.code" /></label
+              ><label>Name<input [(ngModel)]="criterionForm.name" /></label
+              ><label
+                >Tool<select [(ngModel)]="criterionForm.sourceTool">
+                  <option>gitlab</option>
+                  <option>jira</option>
+                  <option>confluence</option>
+                </select></label
+              ><label>Metric key<input [(ngModel)]="criterionForm.metricKey" /></label
+              ><label
+                >Aggregation<select [(ngModel)]="criterionForm.aggregation">
+                  <option>SUM</option>
+                  <option>COUNT</option>
+                  <option>RATIO</option>
+                </select></label
+              ><label *ngIf="criterionForm.aggregation === 'RATIO'"
+                >Denominator metric<input [(ngModel)]="criterionForm.denominatorMetricKey" /></label
+              ><label>Level<input [(ngModel)]="criterionForm.levelCode" /></label
+              ><label
+                >Operator<select [(ngModel)]="criterionForm.operator">
+                  <option>>=</option>
+                  <option><=</option>
+                  <option>></option>
+                  <option><</option>
+                  <option>=</option>
+                </select></label
+              ><label>Threshold<input type="number" [(ngModel)]="criterionForm.threshold" /></label
+              ><label
+                >Type<select [(ngModel)]="criterionForm.evaluationType">
+                  <option>AUTOMATIC</option>
+                  <option>AUTOMATIC_WITH_REVIEW</option>
+                  <option>MANAGER_REVIEWED</option>
+                  <option>EVIDENCE_ONLY</option>
+                </select></label
+              ><button (click)="createCriterion()">Publish criterion</button>
+            </section>
+          </div>
+        </details>
       </ng-container>
 
       <ng-container *ngIf="tab === 'integrations'"
@@ -485,13 +492,6 @@ export class AppComponent {
       error: (error) => this.fail(error),
     });
   }
-  calculate(): void {
-    this.api.calculate(this.evaluationForm).subscribe({
-      next: () => this.ok('Evaluation calculated'),
-      error: (error) => this.fail(error),
-    });
-  }
-
   prepareReport(): void {
     if (!this.employee) return;
     this.error = '';

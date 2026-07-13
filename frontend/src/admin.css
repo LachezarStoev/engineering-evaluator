@@ -14,8 +14,57 @@
   font-size: 12px;
   margin-left: 8px;
 }
+.admin-group {
+  background: #fff;
+  border: 1px solid #dfe5dd;
+  border-radius: 16px;
+  margin-bottom: 18px;
+  box-shadow: 0 6px 24px #1c3f3520;
+  overflow: hidden;
+}
+.admin-group > summary {
+  cursor: pointer;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+}
+.admin-group > summary::-webkit-details-marker {
+  display: none;
+}
+.admin-group > summary span:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.admin-group > summary small {
+  color: #78817d;
+}
+.admin-group[open] > summary {
+  border-bottom: 1px solid #e5e9e4;
+}
+.admin-form {
+  box-shadow: none;
+  border: 0;
+  margin: 0;
+}
+.admin-content {
+  padding: 18px;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.admin-form > button {
+  margin-top: 18px;
+}
 @media (max-width: 700px) {
   .search-row {
     flex-direction: column;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
   }
 }
