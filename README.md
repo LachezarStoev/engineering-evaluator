@@ -9,13 +9,14 @@ ranking system.
 
 ## How it works
 
-|             1 · Collect              |           2 · Calculate           |              3 · Review              |
-| :----------------------------------: | :-------------------------------: | :----------------------------------: |
-|    **Jira · GitLab · Confluence**    | **Versioned deterministic rules** |       **Advisory AI summary**        |
-|      Read-only synchronization       | Metrics · coverage · source links |  Developer verification or dispute   |
-| Normalized and deduplicated evidence |        Reproducible result        | Manager decision · finalize · export |
+**Collect → Calculate → Review**
 
-> **Sources → evidence → deterministic metrics → AI explanation → human review → decision**
+1. **Collect** — Synchronize read-only Jira, GitLab, and Confluence activity into normalized,
+   deduplicated evidence.
+2. **Calculate** — Apply versioned deterministic formulas and produce reproducible metrics, data
+   coverage, and source links.
+3. **Review** — Use AI only as an advisory summary, let the developer verify or dispute evidence,
+   and record the manager's final reasoned decision and export.
 
 The boundary is intentional: connectors establish what happened, formulas calculate measurable
 results, AI explains supplied facts, and authorized people make the career decision.
