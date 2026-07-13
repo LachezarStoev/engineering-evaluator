@@ -91,23 +91,35 @@ class GitLabConnector extends ReadOnlyHttpConnector {
     }
 
     public List<IdentityCandidate> discoverUsers(String email) {
-        List<?> rows =
-                client.get()
-                        .uri(u -> u.path("/api/v4/users").queryParam("search", email).build())
-                        .retrieve()
-                        .body(List.class);
+        List<?> rows = searchUsers(email);
+        String emailLocalPart =
+                email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
+        if (rows == null || rows.isEmpty()) rows = searchUsers(emailLocalPart);
         if (rows == null) return List.of();
         List<IdentityCandidate> out = new ArrayList<>();
         for (Object row : rows) {
             Map<?, ?> m = (Map<?, ?>) row;
+            String username = Objects.toString(m.get("username"), "");
+            String discoveredEmail =
+                    Objects.toString(m.get("email"), Objects.toString(m.get("public_email"), ""));
+            boolean exact =
+                    email.equalsIgnoreCase(discoveredEmail)
+                            || emailLocalPart.equalsIgnoreCase(username);
             out.add(
                     new IdentityCandidate(
                             String.valueOf(m.get("id")),
-                            String.valueOf(m.get("username")),
-                            Objects.toString(m.get("email"), ""),
-                            email.equalsIgnoreCase(Objects.toString(m.get("email"), ""))));
+                            username,
+                            exact && discoveredEmail.isBlank() ? email : discoveredEmail,
+                            exact));
         }
         return out;
+    }
+
+    private List<?> searchUsers(String query) {
+        return client.get()
+                .uri(u -> u.path("/api/v4/users").queryParam("search", query).build())
+                .retrieve()
+                .body(List.class);
     }
 
     public List<EvidenceInput> syncEvidence(String id, Instant from, Instant to) {
@@ -930,19 +942,9 @@ class ConfluenceConnector extends ReadOnlyHttpConnector {
     }
 
     public List<IdentityCandidate> discoverUsers(String email) {
-        var row =
-                client.get()
-                        .uri(u -> u.path("/rest/api/user").queryParam("username", email).build())
-                        .retrieve()
-                        .body(Map.class);
-        if (row == null) return List.of();
-        return List.of(
-                new IdentityCandidate(
-                        Objects.toString(
-                                row.get("accountId"), Objects.toString(row.get("userKey"), "")),
-                        Objects.toString(row.get("username"), ""),
-                        Objects.toString(row.get("email"), email),
-                        true));
+        // Atlassian Cloud no longer permits Confluence lookup by username/email. The shared
+        // Atlassian accountId discovered through Jira is reused by IdentityDiscoveryService.
+        return List.of();
     }
 
     public List<EvidenceInput> syncEvidence(String id, Instant from, Instant to) {

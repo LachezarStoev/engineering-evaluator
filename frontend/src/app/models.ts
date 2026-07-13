@@ -10,6 +10,26 @@ export interface Employee {
   targetLevelCode?: string;
 }
 
+export interface EngineeringLevel {
+  code: string;
+  name: string;
+  version: number;
+  status: string;
+}
+
+export interface Criterion {
+  code: string;
+  name: string;
+  sourceTool: string;
+  metricKey: string;
+  aggregation: string;
+  operator: string;
+  thresholdValue: number | null;
+  levelCode: string;
+  version: number;
+  status: string;
+}
+
 export interface CriterionResult {
   id: string;
   resultStatus: string;
@@ -74,5 +94,11 @@ export interface AiSummary {
   text: string;
 }
 export interface SyncResponse {
+  evidenceProcessed: number;
+}
+
+export interface PreparedReport {
+  evaluation: Evaluation;
+  identities: { toolKey: string; username?: string; matchedEmail?: string }[];
   evidenceProcessed: number;
 }

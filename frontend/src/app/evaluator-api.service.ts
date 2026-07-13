@@ -3,12 +3,15 @@ import { inject, Injectable } from '@angular/core';
 import type {
   AiSummary,
   ConnectorConfig,
+  Criterion,
   Employee,
+  EngineeringLevel,
   Evaluation,
   Evidence,
   IdentityCandidate,
   IdentityDiscovery,
   IntegrationOnboarding,
+  PreparedReport,
   SyncResponse,
 } from './models';
 
@@ -18,6 +21,12 @@ export class EvaluatorApi {
 
   employee(email: string) {
     return this.http.get<Employee>(`/api/v1/employees/by-email/${encodeURIComponent(email)}`);
+  }
+  levels() {
+    return this.http.get<EngineeringLevel[]>('/api/v1/levels');
+  }
+  criteria() {
+    return this.http.get<Criterion[]>('/api/v1/criteria');
   }
   evaluations(email: string) {
     return this.http.get<Evaluation[]>(
@@ -41,6 +50,12 @@ export class EvaluatorApi {
   }
   calculate(request: object) {
     return this.http.post<Evaluation>('/api/v1/evaluations/recalculate', request);
+  }
+  prepareReport(email: string, request: object) {
+    return this.http.post<PreparedReport>(
+      `/api/v1/employees/${encodeURIComponent(email)}/prepare-report`,
+      request,
+    );
   }
   decide(resultId: string, decision: string, note: string) {
     return this.http.post(`/api/v1/criterion-results/${resultId}/decision`, { decision, note });

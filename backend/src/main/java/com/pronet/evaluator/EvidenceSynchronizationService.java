@@ -34,6 +34,14 @@ class EvidenceSynchronizationService {
     }
 
     @Transactional
+    int syncEmployee(UUID employeeId, Instant from, Instant to) {
+        return identities.findByEmployeeId(employeeId).stream()
+                .filter(ExternalIdentity::isVerified)
+                .mapToInt(identity -> sync(identity, from, to))
+                .sum();
+    }
+
+    @Transactional
     int sync(ExternalIdentity identity, Instant from, Instant to) {
         var connector =
                 connectors.stream()

@@ -98,6 +98,42 @@ class ApiController {
         return service.calculate(r.email(), r.period(), r.levelCode(), r.ruleVersion());
     }
 
+    @PostMapping("/employees/{email}/prepare-report")
+    @PreAuthorize(
+            "hasAnyRole('EVALUATOR_ADMIN','ENGINEERING_MANAGER','INTEGRATION_ADMIN','ORGANIZATION_ADMIN')")
+    PreparedReport prepareReport(
+            @PathVariable String email, @Valid @RequestBody PrepareReportRequest request) {
+        var employee = lookup(email);
+        var zone = ZoneId.of(request.timezone());
+        var from = request.from().atStartOfDay(zone).toInstant();
+        var to = request.to().plusDays(1).atStartOfDay(zone).toInstant();
+        if (!from.isBefore(to)) throw new IllegalArgumentException("from must be before to");
+        var levelCode =
+                Optional.ofNullable(request.levelCode())
+                        .filter(value -> !value.isBlank())
+                        .orElseGet(
+                                () ->
+                                        Optional.ofNullable(employee.getTargetLevelCode())
+                                                .filter(value -> !value.isBlank())
+                                                .orElse(employee.getCurrentLevelCode()));
+        var identities = identityDiscovery.autoConfirmExact(email);
+        int evidenceProcessed = synchronization.syncEmployee(employee.getId(), from, to);
+        var label =
+                Optional.ofNullable(request.period())
+                        .filter(value -> !value.isBlank())
+                        .orElse(request.from() + ".." + request.to());
+        var evaluation =
+                service.calculate(
+                        email,
+                        label,
+                        levelCode,
+                        request.ruleVersion(),
+                        from,
+                        to,
+                        request.timezone());
+        return new PreparedReport(evaluation, identities, evidenceProcessed);
+    }
+
     @PostMapping("/evaluations/{id}/finalize")
     @PreAuthorize("hasRole('ENGINEERING_MANAGER')")
     Evaluation finalizeEvaluation(@PathVariable UUID id) {
@@ -319,6 +355,17 @@ class ApiController {
             String timezone,
             @NotBlank String levelCode,
             @Min(1) int ruleVersion) {}
+
+    record PrepareReportRequest(
+            String period,
+            @NotNull LocalDate from,
+            @NotNull LocalDate to,
+            @NotBlank String timezone,
+            String levelCode,
+            @Min(1) int ruleVersion) {}
+
+    record PreparedReport(
+            Evaluation evaluation, List<ExternalIdentity> identities, int evidenceProcessed) {}
 
     record LevelRequest(
             @NotBlank String code,

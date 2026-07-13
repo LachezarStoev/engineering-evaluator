@@ -5,8 +5,10 @@ import { FormsModule } from '@angular/forms';
 import { EvaluatorApi } from './evaluator-api.service';
 import type {
   ConnectorConfig,
+  Criterion,
   Decision,
   Employee,
+  EngineeringLevel,
   Evaluation,
   Evidence,
   IdentityCandidate,
@@ -25,7 +27,7 @@ import type {
       </div>
       <nav>
         <button [class.active]="tab === 'report'" (click)="tab = 'report'">Report</button
-        ><button [class.active]="tab === 'admin'" (click)="tab = 'admin'">Administration</button
+        ><button [class.active]="tab === 'admin'" (click)="openAdmin()">Administration</button
         ><button
           [class.active]="tab === 'integrations'"
           (click)="tab = 'integrations'; loadHealth(); loadOnboarding()"
@@ -141,13 +143,59 @@ import type {
             </div>
           </section>
         </section>
-        <section *ngIf="employee && !evaluations.length" class="empty">
-          <h2>No evaluation yet</h2>
-          <p>Publish criteria and calculate the first quarterly report from Administration.</p>
+        <section *ngIf="employee" class="empty">
+          <h2>
+            {{ evaluations.length ? 'Create report for another period' : 'No evaluation yet' }}
+          </h2>
+          <p>
+            The standard career-matrix criteria are already published. Select a period and the
+            system will discover exact Jira, GitLab, and Confluence identities, synchronize their
+            evidence, and calculate the report.
+          </p>
+          <div class="search-row">
+            <label>From<input type="date" [(ngModel)]="evaluationForm.from" /></label
+            ><label>To, inclusive<input type="date" [(ngModel)]="evaluationForm.to" /></label
+            ><label
+              >Level<select [(ngModel)]="evaluationForm.levelCode">
+                <option>JUNIOR</option>
+                <option>MID</option>
+                <option>MID_II</option>
+                <option>SENIOR</option>
+                <option>PRINCIPAL</option>
+              </select></label
+            ><button (click)="prepareReport()">Collect evidence and create report</button>
+          </div>
         </section>
       </ng-container>
 
       <ng-container *ngIf="tab === 'admin'">
+        <section class="setup-note">
+          The five engineering levels and their standard criteria are preloaded. Use this screen
+          only to add employees or deliberately publish a new version of a level or criterion.
+        </section>
+        <section class="panel">
+          <div class="panel-title">
+            <div>
+              <small>CURRENT CONFIGURATION</small>
+              <h2>Published career matrix</h2>
+            </div>
+            <span class="status">{{ levels.length }} LEVELS · {{ criteria.length }} CRITERIA</span>
+          </div>
+          <article *ngFor="let level of levels">
+            <div class="metric">
+              <strong>{{ level.code }} · {{ level.name }}</strong
+              ><small>Version {{ level.version }} · {{ level.status }}</small>
+              <div class="evidence-tags">
+                <span *ngFor="let criterion of criteriaFor(level.code)"
+                  ><b>{{ criterion.name }}:</b> {{ criterion.aggregation }}({{
+                    criterion.sourceTool
+                  }}.{{ criterion.metricKey }}) {{ criterion.operator }}
+                  {{ criterion.thresholdValue }}</span
+                >
+              </div>
+            </div>
+          </article>
+        </section>
         <div class="grid">
           <section class="panel">
             <h2>Add employee</h2>
@@ -328,6 +376,8 @@ export class AppComponent {
   evidenceByEvaluation: Record<string, Evidence[] | undefined> = {};
   identityEmail = '';
   discoveries: IdentityDiscovery[] = [];
+  levels: EngineeringLevel[] = [];
+  criteria: Criterion[] = [];
 
   readonly employeeForm = {
     email: '',
@@ -367,8 +417,8 @@ export class AppComponent {
   readonly evaluationForm = {
     email: '',
     period: '',
-    from: '',
-    to: '',
+    from: this.quarterStart(),
+    to: this.today(),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
     levelCode: 'MID',
     ruleVersion: 1,
@@ -379,6 +429,9 @@ export class AppComponent {
     this.api.employee(this.email).subscribe({
       next: (employee) => {
         this.employee = employee;
+        this.evaluationForm.email = employee.canonicalEmail;
+        this.evaluationForm.levelCode =
+          employee.targetLevelCode || employee.currentLevelCode || 'MID';
         this.changeDetector.markForCheck();
         this.api.evaluations(this.email).subscribe({
           next: (evaluations) => {
@@ -390,6 +443,30 @@ export class AppComponent {
       },
       error: (error) => this.fail(error),
     });
+  }
+
+  openAdmin(): void {
+    this.tab = 'admin';
+    this.api.levels().subscribe({
+      next: (levels) => {
+        this.levels = levels;
+        this.changeDetector.markForCheck();
+      },
+      error: (error) => this.fail(error),
+    });
+    this.api.criteria().subscribe({
+      next: (criteria) => {
+        this.criteria = criteria;
+        this.changeDetector.markForCheck();
+      },
+      error: (error) => this.fail(error),
+    });
+  }
+
+  criteriaFor(levelCode: string): Criterion[] {
+    return this.criteria.filter(
+      (criterion) => criterion.levelCode === levelCode && criterion.status === 'PUBLISHED',
+    );
   }
 
   createEmployee(): void {
@@ -411,6 +488,22 @@ export class AppComponent {
   calculate(): void {
     this.api.calculate(this.evaluationForm).subscribe({
       next: () => this.ok('Evaluation calculated'),
+      error: (error) => this.fail(error),
+    });
+  }
+
+  prepareReport(): void {
+    if (!this.employee) return;
+    this.error = '';
+    this.notice = 'Discovering identities and synchronizing evidence…';
+    this.api.prepareReport(this.employee.canonicalEmail, this.evaluationForm).subscribe({
+      next: (result) => {
+        const tools = result.identities.map((identity) => identity.toolKey).join(', ') || 'none';
+        this.ok(
+          `Report created · ${result.evidenceProcessed} evidence records · identities: ${tools}`,
+        );
+        this.load();
+      },
       error: (error) => this.fail(error),
     });
   }
@@ -571,6 +664,19 @@ export class AppComponent {
   }
 
   private today(): string {
-    return new Date().toISOString().slice(0, 10);
+    return this.localDate(new Date());
+  }
+
+  private quarterStart(): string {
+    const now = new Date();
+    const month = Math.floor(now.getMonth() / 3) * 3;
+    return this.localDate(new Date(now.getFullYear(), month, 1));
+  }
+
+  private localDate(value: Date): string {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }
