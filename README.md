@@ -9,7 +9,11 @@ ranking system.
 
 ## How it works
 
-![Evaluation pipeline](docs/evaluation-pipeline.svg)
+|             1 · Collect              |           2 · Calculate           |              3 · Review              |
+| :----------------------------------: | :-------------------------------: | :----------------------------------: |
+|    **Jira · GitLab · Confluence**    | **Versioned deterministic rules** |       **Advisory AI summary**        |
+|      Read-only synchronization       | Metrics · coverage · source links |  Developer verification or dispute   |
+| Normalized and deduplicated evidence |        Reproducible result        | Manager decision · finalize · export |
 
 > **Sources → evidence → deterministic metrics → AI explanation → human review → decision**
 
