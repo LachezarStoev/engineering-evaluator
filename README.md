@@ -9,22 +9,7 @@ ranking system.
 
 ## How it works
 
-```mermaid
-flowchart LR
-    subgraph collect [Collect]
-        A["Jira · GitLab · Confluence"] --> B["Read-only synchronization"]
-        B --> C["Normalized evidence"]
-    end
-    subgraph calculate [Calculate]
-        C --> D["Versioned deterministic rules"]
-        D --> E["Metrics · coverage · source links"]
-    end
-    subgraph review [Review]
-        E --> F["Advisory AI summary"]
-        F --> G["Developer verification or dispute"]
-        G --> H["Manager decision and final export"]
-    end
-```
+![Evaluation pipeline](docs/evaluation-pipeline.svg)
 
 > **Sources → evidence → deterministic metrics → AI explanation → human review → decision**
 
